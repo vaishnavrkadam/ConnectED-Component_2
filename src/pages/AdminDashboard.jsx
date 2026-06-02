@@ -25,10 +25,12 @@ import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import SaveIcon from '@mui/icons-material/Save';
+import UploadFileIcon from '@mui/icons-material/UploadFile';
 import { BarChart, PieChart } from '@mui/x-charts';
 import { useCollection } from '../hooks/useCollection.js';
 import { deleteFaculty, facultyQuery, saveFaculty } from '../services/facultyService.js';
-import { allTeamsQuery, manuallyAssignTeam, pendingAllocationsQuery } from '../services/teamService.js';
+import { allTeamsQuery, manuallyAssignTeam, pendingAllocationsQuery, submitTeam } from '../services/teamService.js';
+import { parseTeamsCsv } from '../utils/teamCsv.js';
 
 const emptyFaculty = {
   facultyId: '',
@@ -44,6 +46,7 @@ export default function AdminDashboard() {
   const [editingId, setEditingId] = useState(null);
   const [search, setSearch] = useState('');
   const [notice, setNotice] = useState('');
+  const [bulkUploading, setBulkUploading] = useState(false);
   const { data: faculty, loading: facultyLoading, error: facultyError } = useCollection(useMemo(() => facultyQuery(), []));
   const { data: teams, loading: teamsLoading } = useCollection(useMemo(() => allTeamsQuery(), []));
   const { data: pending } = useCollection(useMemo(() => pendingAllocationsQuery(), []));
@@ -95,6 +98,28 @@ export default function AdminDashboard() {
     setNotice(`Assigned ${selected.facultyName}.`);
   };
 
+  const handleTeamCsvUpload = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+
+    setBulkUploading(true);
+    try {
+      const csvText = await file.text();
+      const parsedTeams = parseTeamsCsv(csvText);
+
+      for (const team of parsedTeams) {
+        await submitTeam(team);
+      }
+
+      setNotice(`Uploaded and auto-allocated ${parsedTeams.length} teams.`);
+    } catch (error) {
+      setNotice(error.message);
+    } finally {
+      setBulkUploading(false);
+    }
+  };
+
   return (
     <Stack spacing={3}>
       <Box>
@@ -122,6 +147,28 @@ export default function AdminDashboard() {
           </Grid>
         ))}
       </Grid>
+
+      <Card>
+        <CardContent>
+          <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems={{ xs: 'stretch', md: 'center' }}>
+            <Box sx={{ flexGrow: 1 }}>
+              <Typography variant="h6">Bulk Team Upload</Typography>
+              <Typography color="text.secondary">
+                Upload a CSV with student names and project topic. Each row is submitted and auto-allocated immediately.
+              </Typography>
+            </Box>
+            <Button component="label" variant="contained" startIcon={<UploadFileIcon />} disabled={bulkUploading}>
+              Upload CSV
+              <input type="file" accept=".csv,text/csv" hidden onChange={handleTeamCsvUpload} />
+            </Button>
+          </Stack>
+          <Alert severity="info" sx={{ mt: 2 }}>
+            Accepted topic headers: TOPIC, TOPIC NAME, PROJECT TOPIC, PROJECT TITLE. Accepted student headers: TEAM
+            LEADER, STUDENT1-STUDENT5, MEMBER1-MEMBER5, STUDENTS, MEMBERS.
+          </Alert>
+          {bulkUploading && <LinearProgress sx={{ mt: 2 }} />}
+        </CardContent>
+      </Card>
 
       <Grid container spacing={3}>
         <Grid size={{ xs: 12, lg: 7 }}>
