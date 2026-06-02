@@ -162,13 +162,12 @@ export default function AdminDashboard() {
   };
 
   return (
-    <Box sx={{ bgcolor: '#f3f6f9', mx: { xs: -2, sm: -3 }, my: -4, minHeight: 'calc(100vh - 64px)', px: { xs: 2, sm: 3 }, py: 2 }}>
+    <Box sx={{ bgcolor: '#000000', mx: { xs: -2, sm: -3 }, my: -4, minHeight: 'calc(100vh - 64px)', px: { xs: 2, sm: 3 }, py: 2 }}>
       <Stack spacing={2}>
         <Stack direction="row" alignItems="center" justifyContent="space-between">
           <Typography variant="h5" sx={{ fontWeight: 800 }}>
             Dashboard
           </Typography>
-          <Avatar sx={{ width: 34, height: 34, bgcolor: '#d8efff', color: '#2a7fad' }}>A</Avatar>
         </Stack>
 
         {(facultyLoading || teamsLoading) && <LinearProgress />}
@@ -258,14 +257,18 @@ export default function AdminDashboard() {
                 fullWidth
                 sx={{
                   minHeight: 72,
-                  border: '1px dashed #b7c2cc',
-                  color: 'text.primary',
-                  bgcolor: '#f8fbfd',
+                  border: '1px dashed #4f6070',
+                  color: '#f4f8fc',
+                  bgcolor: '#12181f',
                   justifyContent: 'center',
+                  '&:hover': {
+                    bgcolor: '#18212a',
+                    borderColor: '#7dbff2',
+                  },
                 }}
               >
                 <Stack direction="row" spacing={1.5} alignItems="center">
-                  <UploadFileIcon color="action" />
+                  <UploadFileIcon sx={{ color: '#8fc8f4' }} />
                   <Typography variant="body2">Drag & Drop CSV here or Click to Browse</Typography>
                 </Stack>
                 <input type="file" accept=".csv,text/csv" hidden onChange={handleTeamCsvUpload} />
@@ -313,7 +316,7 @@ export default function AdminDashboard() {
               </Button>
             </Stack>
             <Table size="small">
-              <TableHead sx={{ bgcolor: '#eef3f8' }}>
+              <TableHead sx={{ bgcolor: '#101820', '& .MuiTableCell-root': { color: '#f4f8fc', fontWeight: 800 } }}>
                 <TableRow>
                   <TableCell>Name</TableCell>
                   <TableCell>Expertise</TableCell>
@@ -388,7 +391,7 @@ export default function AdminDashboard() {
               </Tabs>
             </Box>
             <Table size="small">
-              <TableHead sx={{ bgcolor: '#eef3f8' }}>
+              <TableHead sx={{ bgcolor: '#101820', '& .MuiTableCell-root': { color: '#f4f8fc', fontWeight: 800 } }}>
                 <TableRow>
                   <TableCell>Status</TableCell>
                   <TableCell>Team / Topic</TableCell>

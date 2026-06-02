@@ -1,36 +1,26 @@
-import { createContext, useContext, useMemo, useState } from 'react';
+import { createContext, useContext, useMemo } from 'react';
 import { CssBaseline, ThemeProvider, createTheme } from '@mui/material';
 
 const ColorModeContext = createContext(null);
 
 export function ColorModeProvider({ children }) {
-  const [mode, setMode] = useState(() => localStorage.getItem('mentor-theme') || 'light');
-
   const value = useMemo(
     () => ({
-      mode,
-      toggleMode: () => {
-        setMode((current) => {
-          const next = current === 'light' ? 'dark' : 'light';
-          localStorage.setItem('mentor-theme', next);
-          return next;
-        });
-      },
+      mode: 'dark',
     }),
-    [mode],
+    [],
   );
 
   const theme = useMemo(
     () =>
       createTheme({
-        colorSchemes: { light: true, dark: true },
         palette: {
-          mode,
-          primary: { main: mode === 'light' ? '#1262a3' : '#6fb6ff' },
+          mode: 'dark',
+          primary: { main: '#6fb6ff' },
           secondary: { main: '#2f8f72' },
           background: {
-            default: mode === 'light' ? '#f6f8fb' : '#101417',
-            paper: mode === 'light' ? '#ffffff' : '#171d22',
+            default: '#000000',
+            paper: '#171d22',
           },
         },
         shape: { borderRadius: 8 },
@@ -46,7 +36,7 @@ export function ColorModeProvider({ children }) {
             styleOverrides: {
               root: {
                 border: '1px solid',
-                borderColor: mode === 'light' ? '#e3e8ef' : '#27313a',
+                borderColor: '#27313a',
                 boxShadow: 'none',
               },
             },
@@ -56,7 +46,7 @@ export function ColorModeProvider({ children }) {
           },
         },
       }),
-    [mode],
+    [],
   );
 
   return (
