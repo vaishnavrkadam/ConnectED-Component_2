@@ -29,17 +29,16 @@ export default function AppLayout() {
             Mentor Allocation
           </Typography>
           <Stack direction="row" spacing={1} sx={{ display: { xs: 'none', sm: 'flex' } }}>
-            <Button component={Link} to="/" variant={location.pathname === '/' ? 'contained' : 'text'}>
-              Student
-            </Button>
-            <Button
-              component={Link}
-              to="/admin"
-              startIcon={<AdminPanelSettingsIcon />}
-              variant={location.pathname === '/admin' ? 'contained' : 'text'}
-            >
-              Admin
-            </Button>
+            {location.pathname !== '/admin' && (
+              <Button component={Link} to="/" variant="contained">
+                Student
+              </Button>
+            )}
+            {location.pathname === '/admin' && (
+              <Button component={Link} to="/admin" startIcon={<AdminPanelSettingsIcon />} variant="contained">
+                Admin
+              </Button>
+            )}
           </Stack>
           <Tooltip title={mode === 'light' ? 'Dark theme' : 'Light theme'}>
             <IconButton onClick={toggleMode} color="inherit">
