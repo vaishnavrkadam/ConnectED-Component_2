@@ -10,9 +10,21 @@ import {
 export default function AppLayout() {
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: '#000000' }}>
-      <AppBar position="sticky" color="inherit" elevation={0} sx={{ borderBottom: '1px solid', borderColor: 'divider' }}>
-        <Toolbar sx={{ gap: 2 }}>
-          <Box component="img" src="/logo.svg" alt="Mentor Allocation logo" sx={{ width: 34, height: 34, objectFit: 'contain' }} />
+      <AppBar position="sticky" elevation={0} sx={{ bgcolor: '#050505', borderBottom: '1px solid #27313a' }}>
+        <Toolbar sx={{ gap: 2, minHeight: 76 }}>
+          <Box
+            sx={{
+              width: 52,
+              height: 52,
+              borderRadius: 1,
+              bgcolor: '#ffffff',
+              display: 'grid',
+              placeItems: 'center',
+              p: 0.5,
+            }}
+          >
+            <Box component="img" src="/logo.svg?v=2" alt="Mentor Allocation logo" sx={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+          </Box>
           <Typography variant="h6" sx={{ flexGrow: 1 }}>
             Mentor Allocation
           </Typography>
