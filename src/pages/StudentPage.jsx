@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   Alert,
   Box,
@@ -15,7 +15,7 @@ import {
 } from '@mui/material';
 import SendIcon from '@mui/icons-material/Send';
 import { useCollection } from '../hooks/useCollection.js';
-import { allocateTeamByExpertise, recentTeamsQuery, submitTeam } from '../services/teamService.js';
+import { recentTeamsQuery, submitTeam } from '../services/teamService.js';
 import { detectTopicCategory } from '../utils/categories.js';
 
 const blankMembers = ['', '', '', ''];
@@ -27,15 +27,6 @@ export default function StudentPage() {
   const queryRef = useMemo(() => recentTeamsQuery(), []);
   const { data: teams, loading, error } = useCollection(queryRef);
   const category = detectTopicCategory(form.topic);
-
-  useEffect(() => {
-    const submittedTeam = teams.find((team) => team.status === 'SUBMITTED' && team.topic);
-    if (submittedTeam && !busy) {
-      allocateTeamByExpertise(submittedTeam.id, submittedTeam.topic).catch((allocationError) => {
-        setNotice(allocationError.message);
-      });
-    }
-  }, [teams, busy]);
 
   const updateMember = (index, value) => {
     setForm((current) => ({
@@ -50,7 +41,7 @@ export default function StudentPage() {
     try {
       await submitTeam(form);
       setForm({ teamLeader: '', members: blankMembers, topic: '' });
-      setNotice('Project submitted and mentor allocation started.');
+      setNotice('Project submitted. Mentor allocation will run automatically.');
     } catch (submitError) {
       setNotice(submitError.message);
     } finally {

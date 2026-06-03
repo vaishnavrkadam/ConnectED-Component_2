@@ -36,7 +36,7 @@ import UploadFileIcon from '@mui/icons-material/UploadFile';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import { useCollection } from '../hooks/useCollection.js';
 import { deleteFaculty, facultyQuery, saveFaculty } from '../services/facultyService.js';
-import { allTeamsQuery, manuallyAssignTeam, pendingAllocationsQuery, submitTeam } from '../services/teamService.js';
+import { allTeamsQuery, deleteTeam, manuallyAssignTeam, pendingAllocationsQuery, submitTeam } from '../services/teamService.js';
 import { parseTeamsCsv } from '../utils/teamCsv.js';
 
 const emptyFaculty = {
@@ -128,6 +128,11 @@ export default function AdminDashboard() {
     if (!selected) return;
     await manuallyAssignTeam(team.id, selected);
     setNotice(`Assigned ${selected.facultyName}.`);
+  };
+
+  const removeTeam = async (team) => {
+    await deleteTeam(team.id);
+    setNotice(`Deleted ${team.teamLeader || 'team'} and released its faculty slot.`);
   };
 
   const handleTeamCsvUpload = async (event) => {
@@ -397,6 +402,7 @@ export default function AdminDashboard() {
                   <TableCell>Team / Topic</TableCell>
                   <TableCell>Mentor</TableCell>
                   <TableCell>Manual assign</TableCell>
+                  <TableCell align="right">Actions</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -420,14 +426,21 @@ export default function AdminDashboard() {
                             <MenuItem key={item.id} value={item.id}>
                               {item.facultyName}
                             </MenuItem>
-                          ))}
+                        ))}
                       </TextField>
+                    </TableCell>
+                    <TableCell align="right">
+                      <Tooltip title="Delete team">
+                        <IconButton size="small" color="error" onClick={() => removeTeam(team)}>
+                          <DeleteIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
                     </TableCell>
                   </TableRow>
                 ))}
                 {filteredTeams.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={4}>
+                    <TableCell colSpan={5}>
                       <Alert severity="info">No teams found for this view.</Alert>
                     </TableCell>
                   </TableRow>

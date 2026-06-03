@@ -2,7 +2,7 @@ import * as use from '@tensorflow-models/universal-sentence-encoder';
 import '@tensorflow/tfjs';
 import admin from 'firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
-import { onDocumentCreated, onDocumentUpdated } from 'firebase-functions/v2/firestore';
+import { onDocumentCreated, onDocumentDeleted, onDocumentUpdated } from 'firebase-functions/v2/firestore';
 import { logger } from 'firebase-functions';
 
 admin.initializeApp();
@@ -70,6 +70,20 @@ async function markPending(transaction, teamRef, team, reason) {
     },
     { merge: true },
   );
+}
+
+async function decrementFacultyAllocation(transaction, facultyId) {
+  if (!facultyId) return;
+
+  const facultyRef = db.collection('faculty').doc(facultyId);
+  const facultySnapshot = await transaction.get(facultyRef);
+  if (!facultySnapshot.exists) return;
+
+  const faculty = facultySnapshot.data();
+  transaction.update(facultyRef, {
+    allocatedTeams: Math.max(Number(faculty.allocatedTeams || 0) - 1, 0),
+    updatedAt: FieldValue.serverTimestamp(),
+  });
 }
 
 export const allocateMentorOnTeamCreate = onDocumentCreated(
@@ -152,18 +166,41 @@ export const syncManualAllocationCounts = onDocumentUpdated(
     const beforeFaculty = before.allocatedFaculty?.id;
     const afterFaculty = after.allocatedFaculty?.id;
 
-    if (beforeFaculty === afterFaculty || !afterFaculty) return;
+    if (beforeFaculty === afterFaculty) return;
 
     await db.runTransaction(async (transaction) => {
       if (beforeFaculty) {
-        transaction.update(db.collection('faculty').doc(beforeFaculty), {
-          allocatedTeams: FieldValue.increment(-1),
+        await decrementFacultyAllocation(transaction, beforeFaculty);
+      }
+
+      if (afterFaculty) {
+        transaction.update(db.collection('faculty').doc(afterFaculty), {
+          allocatedTeams: FieldValue.increment(1),
+          updatedAt: FieldValue.serverTimestamp(),
         });
       }
-      transaction.update(db.collection('faculty').doc(afterFaculty), {
-        allocatedTeams: FieldValue.increment(1),
-      });
       transaction.delete(db.collection('pending_allocations').doc(event.params.teamDocId));
+    });
+  },
+);
+
+export const syncDeletedTeamAllocationCounts = onDocumentDeleted(
+  {
+    document: 'teams/{teamDocId}',
+    region: 'asia-south1',
+  },
+  async (event) => {
+    const deletedTeam = event.data?.data();
+    const facultyId = deletedTeam?.allocatedFaculty?.id;
+
+    await db.runTransaction(async (transaction) => {
+      await decrementFacultyAllocation(transaction, facultyId);
+      transaction.delete(db.collection('pending_allocations').doc(event.params.teamDocId));
+    });
+
+    logger.info('Deleted team allocation count synced', {
+      teamDocId: event.params.teamDocId,
+      facultyId: facultyId || null,
     });
   },
 );
