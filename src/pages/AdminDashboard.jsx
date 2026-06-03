@@ -141,7 +141,7 @@ export default function AdminDashboard() {
   };
 
   const removeTeam = async (team) => {
-    await deleteTeam(team.id);
+    await deleteTeam(team);
     setNotice(`Deleted ${team.teamLeader || 'team'} and released its faculty slot.`);
   };
 
