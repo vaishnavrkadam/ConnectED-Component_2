@@ -58,10 +58,19 @@ function facultyDepartment(item) {
   return item.department || item.expertise?.[0] || 'Engineering';
 }
 
-function loadPercent(item) {
+function facultyAllocationCounts(teams) {
+  return teams.reduce((counts, team) => {
+    const facultyId = team.allocatedFaculty?.id;
+    if (!facultyId) return counts;
+    counts.set(facultyId, (counts.get(facultyId) || 0) + 1);
+    return counts;
+  }, new Map());
+}
+
+function loadPercent(item, allocatedTeams) {
   const maxTeams = Number(item.maxTeams || 0);
   if (!maxTeams) return 0;
-  return Math.min((Number(item.allocatedTeams || 0) / maxTeams) * 100, 100);
+  return Math.min((allocatedTeams / maxTeams) * 100, 100);
 }
 
 function statusColor(status) {
@@ -81,6 +90,7 @@ export default function AdminDashboard() {
   const { data: faculty, loading: facultyLoading, error: facultyError } = useCollection(useMemo(() => facultyQuery(), []));
   const { data: teams, loading: teamsLoading } = useCollection(useMemo(() => allTeamsQuery(), []));
   const { data: pending } = useCollection(useMemo(() => pendingAllocationsQuery(), []));
+  const facultyLoads = useMemo(() => facultyAllocationCounts(teams), [teams]);
 
   const visibleFaculty = faculty.filter((item) => {
     const text = `${item.facultyName} ${item.email} ${facultyDepartment(item)} ${item.expertise?.join(' ')}`.toLowerCase();
@@ -95,7 +105,7 @@ export default function AdminDashboard() {
       allocated,
       pending: teams.filter((team) => team.status === 'PENDING').length,
       capacity,
-      filled: faculty.reduce((sum, item) => sum + Number(item.allocatedTeams || 0), 0),
+      filled: allocated,
     };
   }, [teams, faculty]);
 
@@ -333,7 +343,8 @@ export default function AdminDashboard() {
               </TableHead>
               <TableBody>
                 {visibleFaculty.map((item) => {
-                  const percent = loadPercent(item);
+                  const allocatedTeams = facultyLoads.get(item.id) || 0;
+                  const percent = loadPercent(item, allocatedTeams);
                   return (
                     <TableRow key={item.id} hover>
                       <TableCell>{item.facultyName}</TableCell>
@@ -359,7 +370,7 @@ export default function AdminDashboard() {
                             sx={{ flex: 1, height: 6, borderRadius: 99 }}
                           />
                           <Typography variant="body2">
-                            {item.allocatedTeams || 0} / {item.maxTeams}
+                            {allocatedTeams} / {item.maxTeams}
                           </Typography>
                         </Stack>
                       </TableCell>
@@ -421,7 +432,7 @@ export default function AdminDashboard() {
                     <TableCell sx={{ minWidth: 280 }}>
                       <TextField select size="small" fullWidth label="Search for faculty..." value="" onChange={(event) => assign(team, event.target.value)}>
                         {faculty
-                          .filter((item) => Number(item.allocatedTeams || 0) < Number(item.maxTeams || 0))
+                          .filter((item) => Number(facultyLoads.get(item.id) || 0) < Number(item.maxTeams || 0))
                           .map((item) => (
                             <MenuItem key={item.id} value={item.id}>
                               {item.facultyName}
