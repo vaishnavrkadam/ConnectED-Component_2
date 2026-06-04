@@ -39,9 +39,9 @@ export default function StudentPage() {
     event.preventDefault();
     setBusy(true);
     try {
-      await submitTeam(form);
+      const result = await submitTeam(form);
       setForm({ teamLeader: '', members: blankMembers, topic: '' });
-      setNotice('Project submitted. Mentor allocation will run automatically.');
+      setNotice(result.status === 'AUTO_ALLOCATED' ? 'Project submitted and mentor allocated.' : 'Project submitted. Waiting for manual allocation because no faculty slot is available.');
     } catch (submitError) {
       setNotice(submitError.message);
     } finally {

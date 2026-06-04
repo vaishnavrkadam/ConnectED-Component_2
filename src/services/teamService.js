@@ -1,7 +1,7 @@
 import {
-  addDoc,
   collection,
   doc,
+  getDocs,
   increment,
   limit,
   orderBy,
@@ -10,6 +10,7 @@ import {
   serverTimestamp,
 } from 'firebase/firestore';
 import { db } from '../firebase/config';
+import { keywordSimilarity } from '../ml/keywordSimilarity';
 import { detectTopicCategory } from '../utils/categories';
 
 const teamsRef = collection(db, 'teams');
@@ -27,20 +28,85 @@ export function pendingAllocationsQuery() {
   return query(pendingRef, orderBy('timestamp', 'asc'));
 }
 
+async function rankedAvailableFaculty(topic) {
+  const snapshot = await getDocs(query(collection(db, 'faculty'), orderBy('facultyName')));
+  const faculty = snapshot.docs.map((item) => ({ id: item.id, ...item.data() }));
+
+  return keywordSimilarity(topic, faculty).filter((item) => Number(item.allocatedTeams || 0) < Number(item.maxTeams || 0));
+}
+
 export async function submitTeam({ teamLeader, members, topic }) {
-  const created = await addDoc(teamsRef, {
+  const trimmedTopic = topic.trim();
+  const teamRef = doc(teamsRef);
+  const candidates = await rankedAvailableFaculty(trimmedTopic);
+  let allocationStatus = 'PENDING';
+  const teamData = {
     teamId: crypto.randomUUID(),
     teamLeader: teamLeader.trim(),
     members: members.map((member) => member.trim()).filter(Boolean),
-    topic: topic.trim(),
-    category: detectTopicCategory(topic),
+    topic: trimmedTopic,
+    category: detectTopicCategory(trimmedTopic),
     timestamp: serverTimestamp(),
     status: 'SUBMITTED',
     allocatedFaculty: null,
     similarityScore: null,
+  };
+
+  await runTransaction(db, async (transaction) => {
+    let selected = null;
+
+    for (const candidate of candidates) {
+      const facultyRef = doc(db, 'faculty', candidate.id);
+      const facultySnapshot = await transaction.get(facultyRef);
+      const faculty = facultySnapshot.data();
+
+      if (facultySnapshot.exists() && Number(faculty.allocatedTeams || 0) < Number(faculty.maxTeams || 0)) {
+        selected = {
+          ...candidate,
+          ...faculty,
+          id: candidate.id,
+          ref: facultyRef,
+        };
+        break;
+      }
+    }
+
+    if (selected) {
+      allocationStatus = 'AUTO_ALLOCATED';
+      transaction.set(teamRef, {
+        ...teamData,
+        status: 'AUTO_ALLOCATED',
+        allocatedFaculty: {
+          id: selected.id,
+          facultyId: selected.facultyId,
+          facultyName: selected.facultyName,
+          email: selected.email,
+        },
+        similarityScore: selected.previewScore,
+        updatedAt: serverTimestamp(),
+      });
+      transaction.update(selected.ref, {
+        allocatedTeams: increment(1),
+        updatedAt: serverTimestamp(),
+      });
+      transaction.delete(doc(db, 'pending_allocations', teamRef.id));
+      return;
+    }
+
+    transaction.set(teamRef, {
+      ...teamData,
+      status: 'PENDING',
+      updatedAt: serverTimestamp(),
+    });
+    transaction.set(doc(db, 'pending_allocations', teamRef.id), {
+      teamId: teamData.teamId,
+      topic: trimmedTopic,
+      reason: candidates.length === 0 ? 'No faculty has available allocation slots.' : 'No available faculty could be confirmed.',
+      timestamp: serverTimestamp(),
+    });
   });
 
-  return created.id;
+  return { id: teamRef.id, status: allocationStatus };
 }
 
 export async function manuallyAssignTeam(teamId, faculty, similarityScore = 1) {
